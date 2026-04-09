@@ -28,7 +28,11 @@ interface Props {
   userId: string
 }
 
-export default function InventoryClient({ initialItems, householdId }: Props) {
+
+// Track which items we've already auto-added this session to avoid duplicate toasts/adds
+const autoAdded = new Set<string>()
+
+export default function InventoryClient({ initialItems, householdId, userId }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [items, setItems] = useState(initialItems)
@@ -48,6 +52,27 @@ export default function InventoryClient({ initialItems, householdId }: Props) {
     const { error } = await supabase.from('inventory_items').update(update).eq('id', item.id)
     if (!error) {
       setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, ...update } : i))
+
+      // Auto-add to shopping list when hitting minimum quantity
+      if (newQty <= item.min_qty && !autoAdded.has(item.id)) {
+        autoAdded.add(item.id)
+        const { data: existing } = await supabase
+          .from('shopping_list')
+          .select('id')
+          .eq('household_id', householdId)
+          .eq('linked_inventory_id', item.id)
+          .eq('checked', false)
+          .limit(1)
+
+        if (!existing || existing.length === 0) {
+          await supabase.from('shopping_list').insert({
+            household_id: householdId,
+            item_name: item.name,
+            linked_inventory_id: item.id,
+            added_by: userId,
+          })
+        }
+      }
     }
     setAdjusting(null)
   }
