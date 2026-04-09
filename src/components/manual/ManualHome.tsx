@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { BookOpen, ChevronRight, Plus, Loader2 } from 'lucide-react'
+import { BookOpen, ChevronRight, Plus, Loader2, Trash2 } from 'lucide-react'
 import type { ManualChapter } from '@/types/app'
 
 const CHAPTER_ICONS: Record<string, string> = {
@@ -36,16 +36,21 @@ interface Props {
   userId: string
 }
 
-export default function ManualHome({ chapters: initial, householdId, isOwner, userId }: Props) {
+export default function ManualHome({ chapters: initial, householdId }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [chapters, setChapters] = useState(initial)
   const [seeding, setSeeding] = useState(false)
+  const [seedProgress, setSeedProgress] = useState(0)
   const [addingTitle, setAddingTitle] = useState('')
   const [showAdd, setShowAdd] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   async function seedTemplates() {
+    if (seeding) return
     setSeeding(true)
+    setSeedProgress(0)
+
     for (let i = 0; i < TEMPLATES.length; i++) {
       const t = TEMPLATES[i]
       const { data: chapter } = await supabase
@@ -63,9 +68,19 @@ export default function ManualHome({ chapters: initial, householdId, isOwner, us
           })
         }
       }
+      setSeedProgress(i + 1)
     }
+
     router.refresh()
     setSeeding(false)
+  }
+
+  async function deleteChapter(id: string, title: string) {
+    if (!confirm(`Delete "${title}" and all its sections and entries? This cannot be undone.`)) return
+    setDeletingId(id)
+    await supabase.from('manual_chapters').delete().eq('id', id)
+    setChapters((prev) => prev.filter((c) => c.id !== id))
+    setDeletingId(null)
   }
 
   async function addChapter() {
@@ -93,14 +108,28 @@ export default function ManualHome({ chapters: initial, householdId, isOwner, us
           <p className="text-stone-700 font-medium">Your manual is empty</p>
           <p className="text-stone-400 text-sm mt-1">Start with the pre-built template or add chapters manually</p>
         </div>
-        <button
-          onClick={seedTemplates}
-          disabled={seeding}
-          className="inline-flex items-center gap-2 px-5 py-3 bg-stone-800 text-white rounded-xl font-medium hover:bg-stone-700 transition-colors disabled:opacity-50"
-        >
-          {seeding && <Loader2 className="w-4 h-4 animate-spin" />}
-          {seeding ? 'Setting up...' : 'Use full template'}
-        </button>
+
+        {seeding ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-center gap-2 text-stone-600">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span className="text-sm font-medium">Setting up chapter {seedProgress} of {TEMPLATES.length}...</span>
+            </div>
+            <div className="w-48 mx-auto h-1.5 bg-stone-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-stone-800 rounded-full transition-all duration-300"
+                style={{ width: `${(seedProgress / TEMPLATES.length) * 100}%` }}
+              />
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={seedTemplates}
+            className="inline-flex items-center gap-2 px-5 py-3 bg-stone-800 text-white rounded-xl font-medium hover:bg-stone-700 transition-colors"
+          >
+            Use full template
+          </button>
+        )}
       </div>
     )
   }
@@ -108,20 +137,31 @@ export default function ManualHome({ chapters: initial, householdId, isOwner, us
   return (
     <div className="space-y-2">
       {chapters.map((chapter) => (
-        <Link
-          key={chapter.id}
-          href={`/manual/${chapter.id}`}
-          className="flex items-center gap-3 bg-white rounded-xl border border-stone-200 px-4 py-3.5 hover:bg-stone-50 transition-colors"
-        >
-          <span className="text-xl w-8 text-center flex-shrink-0">
-            {CHAPTER_ICONS[chapter.title] ?? '📄'}
-          </span>
-          <span className="flex-1 text-sm font-medium text-stone-900">{chapter.title}</span>
-          <ChevronRight className="w-4 h-4 text-stone-300 flex-shrink-0" />
-        </Link>
+        <div key={chapter.id} className="flex items-center gap-2 group">
+          <Link
+            href={`/manual/${chapter.id}`}
+            className="flex-1 flex items-center gap-3 bg-white rounded-xl border border-stone-200 px-4 py-3.5 hover:bg-stone-50 transition-colors"
+          >
+            <span className="text-xl w-8 text-center flex-shrink-0">
+              {CHAPTER_ICONS[chapter.title] ?? '📄'}
+            </span>
+            <span className="flex-1 text-sm font-medium text-stone-900">{chapter.title}</span>
+            <ChevronRight className="w-4 h-4 text-stone-300 flex-shrink-0" />
+          </Link>
+          <button
+            onClick={() => deleteChapter(chapter.id, chapter.title)}
+            disabled={deletingId === chapter.id}
+            className="opacity-0 group-hover:opacity-100 flex-shrink-0 p-2 text-stone-300 hover:text-red-400 transition-all disabled:opacity-50"
+            aria-label="Delete chapter"
+          >
+            {deletingId === chapter.id
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : <Trash2 className="w-4 h-4" />
+            }
+          </button>
+        </div>
       ))}
 
-      {/* Add chapter */}
       {showAdd ? (
         <div className="flex gap-2 pt-2">
           <input
