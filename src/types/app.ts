@@ -126,6 +126,16 @@ export interface ManualEntry {
   created_at: string
 }
 
+export interface ShoppingListItem {
+  id: string
+  household_id: string
+  item_name: string
+  linked_inventory_id: string | null
+  checked: boolean
+  added_by: string | null
+  created_at: string
+}
+
 export interface HouseholdInvite {
   id: string
   household_id: string
