@@ -34,8 +34,8 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  // Protect all routes except auth pages and public assets
-  if (!user && !pathname.startsWith('/auth') && !pathname.startsWith('/_next') && !pathname.startsWith('/api/auth')) {
+  // Protect all routes except auth pages, join pages, and public assets
+  if (!user && !pathname.startsWith('/auth') && !pathname.startsWith('/join') && !pathname.startsWith('/_next') && !pathname.startsWith('/api/auth')) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     return NextResponse.redirect(url)

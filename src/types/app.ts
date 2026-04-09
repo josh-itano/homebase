@@ -71,6 +71,18 @@ export interface InventoryItem {
   created_at: string
 }
 
+export interface HouseholdInvite {
+  id: string
+  household_id: string
+  role: UserRole
+  token: string
+  created_by: string
+  expires_at: string
+  used_by: string | null
+  used_at: string | null
+  created_at: string
+}
+
 export interface DailyLog {
   id: string
   household_id: string

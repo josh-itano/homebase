@@ -16,7 +16,7 @@ import {
   Menu,
   X,
   Home,
-  Bell,
+  Settings,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -28,6 +28,7 @@ const nav = [
   { href: '/manual', label: 'Manual', icon: BookOpen },
   { href: '/inventory', label: 'Inventory', icon: Package },
   { href: '/log', label: 'Daily Log', icon: ClipboardList },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
 interface Props {
