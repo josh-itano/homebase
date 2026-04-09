@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Copy, Check, UserPlus, Trash2, Crown, User } from 'lucide-react'
+import { Copy, Check, UserPlus, Trash2, Crown, User, ChevronDown } from 'lucide-react'
 import type { HouseholdInvite } from '@/types/app'
 
 interface Member {
@@ -21,13 +21,36 @@ interface Props {
   householdId: string
 }
 
-export default function SettingsClient({ household, members, invites, currentUserId, householdId }: Props) {
+export default function SettingsClient({ household, members: initialMembers, invites, currentUserId, householdId }: Props) {
   const supabase = createClient()
+  const [members, setMembers] = useState<Member[]>(initialMembers)
   const [activeInvites, setActiveInvites] = useState<HouseholdInvite[]>(invites)
   const [newRole, setNewRole] = useState<'owner' | 'manager'>('manager')
   const [creating, setCreating] = useState(false)
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [roleMenuOpen, setRoleMenuOpen] = useState<string | null>(null)
+  const [removing, setRemoving] = useState<string | null>(null)
+
+  async function changeRole(member: Member, newMemberRole: 'owner' | 'manager') {
+    setRoleMenuOpen(null)
+    const { error: err } = await supabase
+      .from('household_members')
+      .update({ role: newMemberRole })
+      .eq('id', member.id)
+
+    if (!err) {
+      setMembers((prev) => prev.map((m) => m.id === member.id ? { ...m, role: newMemberRole } : m))
+    }
+  }
+
+  async function removeMember(member: Member) {
+    if (!confirm(`Remove ${member.display_name ?? 'this member'} from the household?`)) return
+    setRemoving(member.id)
+    await supabase.from('household_members').delete().eq('id', member.id)
+    setMembers((prev) => prev.filter((m) => m.id !== member.id))
+    setRemoving(null)
+  }
 
   async function createInvite() {
     setCreating(true)
@@ -65,7 +88,7 @@ export default function SettingsClient({ household, members, invites, currentUse
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" onClick={() => setRoleMenuOpen(null)}>
       {/* Household name */}
       <section>
         <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">Household</h2>
@@ -78,29 +101,74 @@ export default function SettingsClient({ household, members, invites, currentUse
       <section>
         <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">Members</h2>
         <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">
-          {members.map((m, i) => (
-            <div
-              key={m.id}
-              className={`flex items-center gap-3 px-4 py-3 ${i < members.length - 1 ? 'border-b border-stone-100' : ''}`}
-            >
-              <div className="w-8 h-8 bg-stone-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-sm font-medium text-stone-600">
-                  {(m.display_name ?? '?')[0].toUpperCase()}
-                </span>
+          {members.map((m, i) => {
+            const isSelf = m.user_id === currentUserId
+            return (
+              <div
+                key={m.id}
+                className={`flex items-center gap-3 px-4 py-3 ${i < members.length - 1 ? 'border-b border-stone-100' : ''}`}
+              >
+                <div className="w-8 h-8 bg-stone-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-medium text-stone-600">
+                    {(m.display_name ?? '?')[0].toUpperCase()}
+                  </span>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-stone-900">
+                    {m.display_name ?? 'Unknown'}
+                    {isSelf && <span className="text-stone-400 font-normal"> (you)</span>}
+                  </p>
+                  <p className="text-xs text-stone-400 capitalize">{m.role}</p>
+                </div>
+
+                {isSelf ? (
+                  /* Can't modify yourself */
+                  m.role === 'owner'
+                    ? <Crown className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                    : <User className="w-4 h-4 text-stone-300 flex-shrink-0" />
+                ) : (
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {/* Role picker */}
+                    <div className="relative" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => setRoleMenuOpen(roleMenuOpen === m.id ? null : m.id)}
+                        className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors capitalize"
+                      >
+                        {m.role === 'owner' ? <Crown className="w-3 h-3 text-amber-400" /> : <User className="w-3 h-3" />}
+                        {m.role}
+                        <ChevronDown className="w-3 h-3 ml-0.5" />
+                      </button>
+                      {roleMenuOpen === m.id && (
+                        <div className="absolute right-0 top-full mt-1 bg-white border border-stone-200 rounded-xl shadow-lg z-10 overflow-hidden min-w-[130px]">
+                          {(['owner', 'manager'] as const).filter((r) => r !== m.role).map((r) => (
+                            <button
+                              key={r}
+                              onClick={() => changeRole(m, r)}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 transition-colors capitalize"
+                            >
+                              {r === 'owner' ? <Crown className="w-3.5 h-3.5 text-amber-400" /> : <User className="w-3.5 h-3.5 text-stone-400" />}
+                              Make {r}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Remove */}
+                    <button
+                      onClick={() => removeMember(m)}
+                      disabled={removing === m.id}
+                      className="text-stone-300 hover:text-red-400 transition-colors disabled:opacity-30"
+                      title="Remove member"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-stone-900">
-                  {m.display_name ?? 'Unknown'}
-                  {m.user_id === currentUserId && <span className="text-stone-400 font-normal"> (you)</span>}
-                </p>
-                <p className="text-xs text-stone-400 capitalize">{m.role}</p>
-              </div>
-              {m.role === 'owner'
-                ? <Crown className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                : <User className="w-4 h-4 text-stone-300 flex-shrink-0" />
-              }
-            </div>
-          ))}
+            )
+          })}
         </div>
       </section>
 

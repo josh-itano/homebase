@@ -1,10 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Home } from 'lucide-react'
 
 export default function LoginForm() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [mode, setMode] = useState<'password' | 'magic'>('password')
@@ -44,7 +46,17 @@ export default function LoginForm() {
     setMessage(null)
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) setMessage({ text: error.message, type: 'error' })
+    if (error) {
+      setMessage({ text: error.message, type: 'error' })
+    } else {
+      const pending = sessionStorage.getItem('pendingInviteToken')
+      if (pending) {
+        sessionStorage.removeItem('pendingInviteToken')
+        router.push(`/join/${pending}`)
+      } else {
+        router.push('/')
+      }
+    }
     setLoading(false)
   }
 

@@ -64,9 +64,11 @@ export default function JoinClient({ token }: { token: string }) {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-      // Save token to sessionStorage, redirect to login, then come back
-      sessionStorage.setItem('pendingInviteToken', token)
-      router.push(`/auth/login`)
+      // Not logged in — use OAuth so we return to this page with a session
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}/join/${token}` },
+      })
       return
     }
 
