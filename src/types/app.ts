@@ -53,6 +53,8 @@ export interface CalendarEvent {
   recurring_rule: RecurringRule
   created_by: string
   created_at: string
+  google_event_id: string | null
+  google_calendar_id: string | null
 }
 
 export interface InventoryItem {

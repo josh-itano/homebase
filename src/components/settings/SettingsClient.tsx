@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Copy, Check, UserPlus, Trash2, Crown, User, ChevronDown } from 'lucide-react'
+import { Copy, Check, UserPlus, Trash2, Crown, User, ChevronDown, CalendarDays, CheckCircle2, Loader2 } from 'lucide-react'
 import type { HouseholdInvite } from '@/types/app'
 
 interface Member {
@@ -14,17 +14,21 @@ interface Member {
 }
 
 interface Props {
+  isOwner: boolean
   household: { id: string; name: string }
   members: Member[]
   invites: HouseholdInvite[]
   currentUserId: string
   householdId: string
+  isGoogleConnected: boolean
 }
 
-export default function SettingsClient({ household, members: initialMembers, invites, currentUserId, householdId }: Props) {
+export default function SettingsClient({ isOwner, household, members: initialMembers, invites, currentUserId, householdId, isGoogleConnected: initialGoogleConnected }: Props) {
   const supabase = createClient()
   const [members, setMembers] = useState<Member[]>(initialMembers)
   const [activeInvites, setActiveInvites] = useState<HouseholdInvite[]>(invites)
+  const [googleConnected, setGoogleConnected] = useState(initialGoogleConnected)
+  const [disconnecting, setDisconnecting] = useState(false)
   const [newRole, setNewRole] = useState<'owner' | 'manager'>('manager')
   const [creating, setCreating] = useState(false)
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
@@ -82,6 +86,14 @@ export default function SettingsClient({ household, members: initialMembers, inv
     setTimeout(() => setCopiedToken(null), 2000)
   }
 
+  async function disconnectGoogle() {
+    if (!confirm('Disconnect Google Calendar? Events already synced will remain.')) return
+    setDisconnecting(true)
+    await fetch('/api/google-calendar/disconnect', { method: 'POST' })
+    setGoogleConnected(false)
+    setDisconnecting(false)
+  }
+
   function formatExpiry(expiresAt: string) {
     const d = new Date(expiresAt)
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -89,16 +101,50 @@ export default function SettingsClient({ household, members: initialMembers, inv
 
   return (
     <div className="space-y-8" onClick={() => setRoleMenuOpen(null)}>
-      {/* Household name */}
+      {/* Google Calendar */}
       <section>
+        <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">Google Calendar</h2>
+        <div className="bg-white rounded-2xl border border-stone-200 p-4">
+          {googleConnected ? (
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-stone-900">Connected</p>
+                <p className="text-xs text-stone-400 mt-0.5">Events sync bidirectionally with your Google Calendar</p>
+              </div>
+              <button
+                onClick={disconnectGoogle}
+                disabled={disconnecting}
+                className="text-xs text-stone-400 hover:text-red-400 transition-colors flex-shrink-0"
+              >
+                {disconnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Disconnect'}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-stone-500">Sync your Home Base calendar with Google Calendar — changes flow both ways automatically.</p>
+              <a
+                href="/api/google-calendar/auth"
+                className="flex items-center justify-center gap-2 w-full py-2.5 border border-stone-200 rounded-xl text-stone-700 text-sm font-medium hover:bg-stone-50 transition-colors"
+              >
+                <CalendarDays className="w-4 h-4" />
+                Connect Google Calendar
+              </a>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Household name — owner only */}
+      {isOwner && <section>
         <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">Household</h2>
         <div className="bg-white rounded-2xl border border-stone-200 px-4 py-3">
           <p className="text-stone-900 font-medium">{household.name}</p>
         </div>
-      </section>
+      </section>}
 
-      {/* Members */}
-      <section>
+      {/* Members — owner only */}
+      {isOwner && <section>
         <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">Members</h2>
         <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">
           {members.map((m, i) => {
@@ -170,10 +216,10 @@ export default function SettingsClient({ household, members: initialMembers, inv
             )
           })}
         </div>
-      </section>
+      </section>}
 
-      {/* Invite link generator */}
-      <section>
+      {/* Invite link generator — owner only */}
+      {isOwner && <section>
         <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">Invite Someone</h2>
         <div className="bg-white rounded-2xl border border-stone-200 p-4 space-y-4">
           <div>
@@ -209,10 +255,10 @@ export default function SettingsClient({ household, members: initialMembers, inv
             {creating ? 'Generating...' : 'Generate invite link'}
           </button>
         </div>
-      </section>
+      </section>}
 
-      {/* Active invite links */}
-      {activeInvites.length > 0 && (
+      {/* Active invite links — owner only */}
+      {isOwner && activeInvites.length > 0 && (
         <section>
           <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">Active Invite Links</h2>
           <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">
