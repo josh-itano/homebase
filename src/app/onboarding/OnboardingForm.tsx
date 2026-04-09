@@ -25,14 +25,26 @@ export default function OnboardingForm() {
       return
     }
 
-    const { data: household, error: hError } = await supabase
+    const { error: hError } = await supabase
       .from('households')
       .insert({ name: householdName.trim(), created_by: user.id })
-      .select()
+
+    if (hError) {
+      setError(hError.message)
+      setLoading(false)
+      return
+    }
+
+    const { data: household, error: fetchError } = await supabase
+      .from('households')
+      .select('id')
+      .eq('created_by', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single()
 
-    if (hError || !household) {
-      setError(hError?.message ?? 'Failed to create household')
+    if (fetchError || !household) {
+      setError(fetchError?.message ?? 'Failed to load household')
       setLoading(false)
       return
     }

@@ -368,6 +368,12 @@ $$ language sql security definer stable;
 
 -- ---- households ----
 alter table households enable row level security;
+create policy "authenticated users can create a household"
+  on households for insert
+  with check (auth.uid() = created_by);
+create policy "creators can view their own household"
+  on households for select
+  using (created_by = auth.uid());
 create policy "members can view their household"
   on households for select
   using (id = get_household_id());
