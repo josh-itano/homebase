@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Next.js default scaffold file — deleted intentionally, must not come back
+src/app/page.tsx
