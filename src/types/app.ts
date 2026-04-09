@@ -71,6 +71,61 @@ export interface InventoryItem {
   created_at: string
 }
 
+export interface Contact {
+  id: string
+  household_id: string
+  name: string
+  role_type: ContactRole
+  company: string | null
+  phone: string | null
+  email: string | null
+  address: string | null
+  website: string | null
+  account_number: string | null
+  availability: string | null
+  notes: string | null
+  is_favorite: boolean
+  owner_only: boolean
+  created_at: string
+}
+
+export interface ServiceHistory {
+  id: string
+  contact_id: string
+  date: string
+  description: string
+  cost: number | null
+  next_visit: string | null
+  created_at: string
+}
+
+export interface ManualChapter {
+  id: string
+  household_id: string
+  title: string
+  sort_order: number
+  created_at: string
+}
+
+export interface ManualSection {
+  id: string
+  chapter_id: string
+  title: string
+  sort_order: number
+  created_at: string
+}
+
+export interface ManualEntry {
+  id: string
+  section_id: string
+  title: string
+  body: string | null
+  owner_only: boolean
+  updated_by: string | null
+  updated_at: string
+  created_at: string
+}
+
 export interface HouseholdInvite {
   id: string
   household_id: string
