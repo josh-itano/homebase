@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Minus, Plus, AlertTriangle, Pencil, Package, Loader2 } from 'lucide-react'
@@ -41,6 +41,37 @@ export default function InventoryClient({ initialItems, householdId, userId }: P
 
   const filtered = filter === 'all' ? items : items.filter((i) => i.category === filter)
   const lowStockCount = items.filter((i) => i.qty <= i.min_qty).length
+
+  // On mount, auto-add any already-low items that aren't on the shopping list yet
+  useEffect(() => {
+    async function syncLowStock() {
+      const lowItems = items.filter((i) => i.qty <= i.min_qty && !autoAdded.has(i.id))
+      if (lowItems.length === 0) return
+
+      const { data: existing } = await supabase
+        .from('shopping_list')
+        .select('linked_inventory_id')
+        .eq('household_id', householdId)
+        .eq('checked', false)
+        .in('linked_inventory_id', lowItems.map((i) => i.id))
+
+      const alreadyOnList = new Set((existing ?? []).map((r: { linked_inventory_id: string }) => r.linked_inventory_id))
+
+      const toAdd = lowItems.filter((i) => !alreadyOnList.has(i.id))
+      for (const item of toAdd) {
+        autoAdded.add(item.id)
+        await supabase.from('shopping_list').insert({
+          household_id: householdId,
+          item_name: item.name,
+          linked_inventory_id: item.id,
+          added_by: userId,
+        })
+      }
+    }
+
+    syncLowStock()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function adjustQty(item: InventoryItem, delta: number) {
     const newQty = Math.max(0, item.qty + delta)
