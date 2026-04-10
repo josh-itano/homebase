@@ -24,6 +24,7 @@ export default function NewTaskClient({ householdId, userId, members }: Props) {
   const [category, setCategory] = useState<TaskCategory>('household')
   const [priority, setPriority] = useState<TaskPriority>('medium')
   const [assignedTo, setAssignedTo] = useState(userId)
+  const [startDate, setStartDate] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [recurring, setRecurring] = useState<RecurringRule>('none')
   const [loading, setLoading] = useState(false)
@@ -42,6 +43,7 @@ export default function NewTaskClient({ householdId, userId, members }: Props) {
       category,
       priority,
       assigned_to: assignedTo || null,
+      start_date: startDate || null,
       due_date: dueDate || null,
       recurring_rule: recurring,
       created_by: userId,
@@ -107,28 +109,45 @@ export default function NewTaskClient({ householdId, userId, members }: Props) {
         </div>
       </div>
 
+      <div>
+        <label className="block text-sm font-medium text-stone-700 mb-1.5">Assign to</label>
+        <select
+          value={assignedTo}
+          onChange={(e) => setAssignedTo(e.target.value)}
+          className="w-full px-3.5 py-2.5 border border-stone-200 rounded-xl text-stone-900 bg-white focus:outline-none focus:ring-2 focus:ring-stone-800"
+        >
+          <option value="">Unassigned</option>
+          {members.map((m) => (
+            <option key={m.user_id} value={m.user_id}>
+              {m.display_name ?? 'Unknown'}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1.5">Assign to</label>
-          <select
-            value={assignedTo}
-            onChange={(e) => setAssignedTo(e.target.value)}
+          <label className="block text-sm font-medium text-stone-700 mb-1.5">
+            Start date <span className="text-stone-400 font-normal">(optional)</span>
+          </label>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => {
+              setStartDate(e.target.value)
+              if (dueDate && e.target.value > dueDate) setDueDate(e.target.value)
+            }}
             className="w-full px-3.5 py-2.5 border border-stone-200 rounded-xl text-stone-900 bg-white focus:outline-none focus:ring-2 focus:ring-stone-800"
-          >
-            <option value="">Unassigned</option>
-            {members.map((m) => (
-              <option key={m.user_id} value={m.user_id}>
-                {m.display_name ?? 'Unknown'}
-              </option>
-            ))}
-          </select>
+          />
         </div>
-
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1.5">Due date</label>
+          <label className="block text-sm font-medium text-stone-700 mb-1.5">
+            Due date <span className="text-stone-400 font-normal">(optional)</span>
+          </label>
           <input
             type="date"
             value={dueDate}
+            min={startDate || undefined}
             onChange={(e) => setDueDate(e.target.value)}
             className="w-full px-3.5 py-2.5 border border-stone-200 rounded-xl text-stone-900 bg-white focus:outline-none focus:ring-2 focus:ring-stone-800"
           />

@@ -31,7 +31,8 @@ export default async function DashboardPage() {
     { data: todayLogRaw },
     { data: membersRaw },
   ] = await Promise.all([
-    supabase.from('tasks').select('*').eq('household_id', householdId).eq('due_date', today).neq('status', 'done').order('priority', { ascending: false }),
+    // Tasks due today OR multi-day tasks that have started (start_date <= today, not yet done)
+    supabase.from('tasks').select('*').eq('household_id', householdId).neq('status', 'done').or(`due_date.eq.${today},and(start_date.lte.${today},start_date.not.is.null)`).order('priority', { ascending: false }),
     supabase.from('tasks').select('*').eq('household_id', householdId).lt('due_date', today).neq('status', 'done').order('due_date', { ascending: true }),
     supabase.from('events').select('*').eq('household_id', householdId).eq('date', today).order('start_time', { ascending: true }),
     supabase.from('inventory_items').select('*').eq('household_id', householdId).filter('qty', 'lte', 'min_qty'),

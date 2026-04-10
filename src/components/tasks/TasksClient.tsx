@@ -161,13 +161,16 @@ export default function TasksClient({ initialTasks, members, userId }: Props) {
                     {getMemberName(task.assigned_to) && (
                       <span className="text-xs text-stone-400">→ {getMemberName(task.assigned_to)}</span>
                     )}
+                    {task.start_date && !task.due_date && (
+                      <span className="text-xs text-stone-400">Started {task.start_date}</span>
+                    )}
                     {task.due_date && (
                       <span className={cn(
                         'text-xs',
                         isOverdue ? 'text-red-500 font-medium' : isToday ? 'text-blue-500' : 'text-stone-400'
                       )}>
                         {isOverdue && <AlertTriangle className="w-3 h-3 inline mr-0.5" />}
-                        {task.due_date}
+                        {task.start_date && task.start_date !== task.due_date ? `${task.start_date} → ` : ''}{task.due_date}
                       </span>
                     )}
                   </div>

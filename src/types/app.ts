@@ -28,6 +28,7 @@ export interface Task {
   category: TaskCategory
   priority: TaskPriority
   assigned_to: string | null
+  start_date: string | null
   due_date: string | null
   recurring_rule: RecurringRule
   status: TaskStatus
