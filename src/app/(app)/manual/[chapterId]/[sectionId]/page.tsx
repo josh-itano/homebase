@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import ManualSectionView from '@/components/manual/ManualSectionView'
-import type { ManualChapter, ManualSection, ManualEntry } from '@/types/app'
+import type { ManualChapter, ManualSection } from '@/types/app'
 
 interface Props { params: Promise<{ chapterId: string; sectionId: string }> }
 
@@ -16,27 +16,23 @@ export default async function SectionPage({ params }: Props) {
   const member = memberData?.[0] as { household_id: string; role: string } | undefined
   if (!member) redirect('/onboarding')
 
-  const [{ data: chapterRaw }, { data: sectionRaw }, { data: entriesRaw }] = await Promise.all([
+  const [{ data: chapterRaw }, { data: sectionRaw }] = await Promise.all([
     supabase.from('manual_chapters').select('*').eq('id', chapterId).limit(1),
     supabase.from('manual_sections').select('*').eq('id', sectionId).limit(1),
-    supabase.from('manual_entries').select('*').eq('section_id', sectionId).order('created_at', { ascending: true }),
   ])
 
   const chapter = chapterRaw?.[0] as ManualChapter | undefined
   const section = sectionRaw?.[0] as ManualSection | undefined
   if (!chapter || !section) notFound()
 
-  // Filter owner-only entries for managers
-  const entries = ((entriesRaw ?? []) as ManualEntry[]).filter(
-    (e) => member.role === 'owner' || !e.owner_only
-  )
+  const isOwner = member.role === 'owner'
+  if (section.owner_only && !isOwner) notFound()
 
   return (
     <ManualSectionView
       chapter={chapter}
       section={section}
-      entries={entries}
-      isOwner={member.role === 'owner'}
+      isOwner={isOwner}
       userId={user!.id}
     />
   )

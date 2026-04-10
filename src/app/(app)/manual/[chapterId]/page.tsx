@@ -26,11 +26,17 @@ export default async function ChapterPage({ params }: Props) {
     .eq('chapter_id', chapterId)
     .order('sort_order', { ascending: true })
 
+  const isOwner = member.role === 'owner'
+  const sections = ((sectionsRaw ?? []) as ManualSection[]).filter(
+    (s) => isOwner || !s.owner_only
+  )
+
   return (
     <ManualChapterView
       chapter={chapter}
-      sections={(sectionsRaw ?? []) as ManualSection[]}
-      isOwner={member.role === 'owner'}
+      sections={sections}
+      isOwner={isOwner}
+      userId={user!.id}
     />
   )
 }

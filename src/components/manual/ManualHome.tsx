@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { BookOpen, ChevronRight, Plus, Loader2, Trash2 } from 'lucide-react'
+import { BookOpen, Plus, Loader2, X } from 'lucide-react'
 import type { ManualChapter } from '@/types/app'
 
 const CHAPTER_ICONS: Record<string, string> = {
@@ -42,9 +42,8 @@ export default function ManualHome({ chapters: initial, householdId }: Props) {
   const [chapters, setChapters] = useState(initial)
   const [seeding, setSeeding] = useState(false)
   const [seedProgress, setSeedProgress] = useState(0)
-  const [addingTitle, setAddingTitle] = useState('')
   const [showAdd, setShowAdd] = useState(false)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [addingTitle, setAddingTitle] = useState('')
 
   async function seedTemplates() {
     if (seeding) return
@@ -73,14 +72,6 @@ export default function ManualHome({ chapters: initial, householdId }: Props) {
 
     router.refresh()
     setSeeding(false)
-  }
-
-  async function deleteChapter(id: string, title: string) {
-    if (!confirm(`Delete "${title}" and all its sections and entries? This cannot be undone.`)) return
-    setDeletingId(id)
-    await supabase.from('manual_chapters').delete().eq('id', id)
-    setChapters((prev) => prev.filter((c) => c.id !== id))
-    setDeletingId(null)
   }
 
   async function addChapter() {
@@ -123,47 +114,57 @@ export default function ManualHome({ chapters: initial, householdId }: Props) {
             </div>
           </div>
         ) : (
-          <button
-            onClick={seedTemplates}
-            className="inline-flex items-center gap-2 px-5 py-3 bg-stone-800 text-white rounded-xl font-medium hover:bg-stone-700 transition-colors"
-          >
-            Use full template
-          </button>
+          <div className="flex flex-col items-center gap-3">
+            <button
+              onClick={seedTemplates}
+              className="inline-flex items-center gap-2 px-5 py-3 bg-stone-800 text-white rounded-xl font-medium hover:bg-stone-700 transition-colors"
+            >
+              Use full template
+            </button>
+            <button
+              onClick={() => setShowAdd(true)}
+              className="text-sm text-stone-500 hover:text-stone-700 transition-colors"
+            >
+              or add a chapter manually
+            </button>
+          </div>
+        )}
+
+        {showAdd && (
+          <div className="flex gap-2 max-w-sm mx-auto pt-2">
+            <input
+              value={addingTitle}
+              onChange={(e) => setAddingTitle(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addChapter()}
+              placeholder="Chapter title"
+              autoFocus
+              className="flex-1 px-3.5 py-2.5 border border-stone-200 rounded-xl text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-800 text-sm"
+            />
+            <button onClick={addChapter} className="px-4 py-2.5 bg-stone-800 text-white rounded-xl text-sm font-medium hover:bg-stone-700">Add</button>
+            <button onClick={() => setShowAdd(false)} className="p-2.5 text-stone-400 hover:text-stone-600"><X className="w-4 h-4" /></button>
+          </div>
         )}
       </div>
     )
   }
 
   return (
-    <div className="space-y-2">
-      {chapters.map((chapter) => (
-        <div key={chapter.id} className="flex items-center gap-2 group">
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-3">
+        {chapters.map((chapter) => (
           <Link
+            key={chapter.id}
             href={`/manual/${chapter.id}`}
-            className="flex-1 flex items-center gap-3 bg-white rounded-xl border border-stone-200 px-4 py-3.5 hover:bg-stone-50 transition-colors"
+            className="flex flex-col items-start gap-2 bg-white rounded-2xl border border-stone-200 px-4 py-4 hover:bg-stone-50 hover:border-stone-300 transition-all"
           >
-            <span className="text-xl w-8 text-center flex-shrink-0">
-              {CHAPTER_ICONS[chapter.title] ?? '📄'}
-            </span>
-            <span className="flex-1 text-sm font-medium text-stone-900">{chapter.title}</span>
-            <ChevronRight className="w-4 h-4 text-stone-300 flex-shrink-0" />
+            <span className="text-2xl">{CHAPTER_ICONS[chapter.title] ?? '📄'}</span>
+            <span className="text-sm font-medium text-stone-900 leading-snug">{chapter.title}</span>
           </Link>
-          <button
-            onClick={() => deleteChapter(chapter.id, chapter.title)}
-            disabled={deletingId === chapter.id}
-            className="opacity-0 group-hover:opacity-100 flex-shrink-0 p-2 text-stone-300 hover:text-red-400 transition-all disabled:opacity-50"
-            aria-label="Delete chapter"
-          >
-            {deletingId === chapter.id
-              ? <Loader2 className="w-4 h-4 animate-spin" />
-              : <Trash2 className="w-4 h-4" />
-            }
-          </button>
-        </div>
-      ))}
+        ))}
+      </div>
 
       {showAdd ? (
-        <div className="flex gap-2 pt-2">
+        <div className="flex gap-2">
           <input
             value={addingTitle}
             onChange={(e) => setAddingTitle(e.target.value)}
@@ -178,7 +179,7 @@ export default function ManualHome({ chapters: initial, householdId }: Props) {
       ) : (
         <button
           onClick={() => setShowAdd(true)}
-          className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-stone-300 rounded-xl text-stone-500 text-sm hover:border-stone-400 hover:text-stone-700 transition-colors mt-2"
+          className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-stone-300 rounded-xl text-stone-500 text-sm hover:border-stone-400 hover:text-stone-700 transition-colors"
         >
           <Plus className="w-4 h-4" /> Add chapter
         </button>

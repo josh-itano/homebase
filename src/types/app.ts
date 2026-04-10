@@ -115,6 +115,10 @@ export interface ManualSection {
   id: string
   chapter_id: string
   title: string
+  body: string | null
+  owner_only: boolean
+  updated_by: string | null
+  updated_at: string | null
   sort_order: number
   created_at: string
 }
