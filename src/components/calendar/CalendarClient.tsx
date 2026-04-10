@@ -119,6 +119,26 @@ export default function CalendarClient({ initialEvents, isGoogleConnected }: Pro
     return dt.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
   }
 
+  // Upcoming: next 30 days from today, deduped to one entry per event (by start date)
+  const in30 = new Date()
+  in30.setDate(in30.getDate() + 30)
+  const in30Str = toLocalDateStr(in30)
+
+  const upcomingByDate = new Map<string, CalendarEvent[]>()
+  for (const e of events) {
+    if (e.date < today || e.date > in30Str) continue
+    if (!upcomingByDate.has(e.date)) upcomingByDate.set(e.date, [])
+    upcomingByDate.get(e.date)!.push(e)
+  }
+  const upcomingDates = [...upcomingByDate.keys()].sort()
+
+  function upcomingDateLabel(d: string) {
+    const diff = Math.round((new Date(d + 'T00:00:00').getTime() - new Date(today + 'T00:00:00').getTime()) / 86400000)
+    if (diff === 0) return 'Today'
+    if (diff === 1) return 'Tomorrow'
+    return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  }
+
   return (
     <div className="space-y-4">
       {/* Google Calendar status bar */}
@@ -267,6 +287,58 @@ export default function CalendarClient({ initialEvents, isGoogleConnected }: Pro
           </div>
         )}
       </div>
+      {/* Upcoming events */}
+      {upcomingDates.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-3">Upcoming · 30 days</p>
+          <div className="space-y-1">
+            {upcomingDates.map((d) => {
+              const dayEvents = (upcomingByDate.get(d) ?? []).sort((a, b) => {
+                if (!a.start_time) return -1
+                if (!b.start_time) return 1
+                return a.start_time.localeCompare(b.start_time)
+              })
+              const label = upcomingDateLabel(d)
+              const isToday = d === today
+
+              return (
+                <div key={d} className="flex gap-3">
+                  {/* Date column */}
+                  <div className="w-16 flex-shrink-0 pt-2.5">
+                    <p className={cn('text-xs font-semibold', isToday ? 'text-stone-900' : 'text-stone-400')}>
+                      {label}
+                    </p>
+                  </div>
+                  {/* Events column */}
+                  <div className="flex-1 space-y-1 min-w-0">
+                    {dayEvents.map((event) => (
+                      <button
+                        key={event.id}
+                        onClick={() => router.push(`/calendar/${event.id}/edit`)}
+                        className="w-full bg-white rounded-xl border border-stone-200 px-3 py-2.5 flex items-center gap-2.5 text-left hover:bg-stone-50 transition-colors"
+                      >
+                        <span className={cn('w-2 h-2 rounded-full flex-shrink-0', CATEGORY_COLORS[event.category] ?? 'bg-stone-400')} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-stone-900 truncate">{event.title}</p>
+                          {!event.all_day && event.start_time && (
+                            <p className="text-xs text-stone-400">{formatTime(event.start_time)}</p>
+                          )}
+                        </div>
+                        {event.location && (
+                          <span className="text-xs text-stone-400 flex items-center gap-1 flex-shrink-0 max-w-[30%] truncate">
+                            <MapPin className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate">{event.location}</span>
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
