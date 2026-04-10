@@ -151,6 +151,20 @@ export interface HouseholdInvite {
   created_at: string
 }
 
+export type DocumentFolder = 'insurance' | 'medical' | 'legal' | 'financial' | 'home' | 'vehicles' | 'school' | 'warranties' | 'taxes' | 'other'
+
+export interface HouseholdDocument {
+  id: string
+  household_id: string
+  folder: DocumentFolder
+  name: string
+  file_url: string
+  tags: string[] | null
+  owner_only: boolean
+  uploaded_by: string | null
+  uploaded_at: string
+}
+
 export interface DailyLog {
   id: string
   household_id: string

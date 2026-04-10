@@ -12,6 +12,7 @@ import {
   Users,
   Package,
   ClipboardList,
+  FolderOpen,
   LogOut,
   Menu,
   X,
@@ -28,6 +29,7 @@ const nav = [
   { href: '/manual', label: 'Manual', icon: BookOpen },
   { href: '/inventory', label: 'Inventory', icon: Package },
   { href: '/log', label: 'Daily Log', icon: ClipboardList },
+  { href: '/documents', label: 'Documents', icon: FolderOpen },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
