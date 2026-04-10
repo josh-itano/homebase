@@ -97,7 +97,11 @@ export default function CalendarClient({ initialEvents, isGoogleConnected }: Pro
   }
 
   function eventsForDate(d: string) {
-    return events.filter((e) => e.date === d)
+    return events.filter((e) => {
+      if (d < e.date) return false
+      if (e.end_date) return d <= e.end_date
+      return d === e.date
+    })
   }
 
   const selectedEvents = eventsForDate(selected)

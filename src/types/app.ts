@@ -53,6 +53,7 @@ export interface CalendarEvent {
   recurring_rule: RecurringRule
   created_by: string
   created_at: string
+  end_date: string | null
   google_event_id: string | null
   google_calendar_id: string | null
 }

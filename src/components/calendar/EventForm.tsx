@@ -28,23 +28,42 @@ export default function EventForm({ item, defaultDate }: Props) {
   const [error, setError] = useState<string | null>(null)
 
   const [title, setTitle] = useState(item?.title ?? '')
-  const [date, setDate] = useState(item?.date ?? defaultDate ?? '')
   const [allDay, setAllDay] = useState(item?.all_day ?? true)
+  const [startDate, setStartDate] = useState(item?.date ?? defaultDate ?? '')
+  const [endDate, setEndDate] = useState(item?.end_date ?? item?.date ?? defaultDate ?? '')
   const [startTime, setStartTime] = useState(item?.start_time?.substring(0, 5) ?? '')
   const [endTime, setEndTime] = useState(item?.end_time?.substring(0, 5) ?? '')
   const [category, setCategory] = useState<EventCategory>(item?.category ?? 'other')
   const [location, setLocation] = useState(item?.location ?? '')
   const [notes, setNotes] = useState(item?.notes ?? '')
 
+  function handleStartDateChange(val: string) {
+    setStartDate(val)
+    // Keep end date in sync if it would fall before start
+    if (!endDate || endDate < val) setEndDate(val)
+  }
+
+  function handleAllDayToggle() {
+    setAllDay((prev) => {
+      if (!prev) {
+        // Turning all-day on: clear times
+        setStartTime('')
+        setEndTime('')
+      }
+      return !prev
+    })
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!title.trim() || !date) return
+    if (!title.trim() || !startDate) return
     setSaving(true)
     setError(null)
 
     const payload = {
       title: title.trim(),
-      date,
+      date: startDate,
+      end_date: endDate && endDate !== startDate ? endDate : null,
       all_day: allDay,
       start_time: allDay ? null : startTime || null,
       end_time: allDay ? null : endTime || null,
@@ -96,53 +115,60 @@ export default function EventForm({ item, defaultDate }: Props) {
         />
       </div>
 
-      {/* Date */}
-      <div>
-        <label className="block text-sm font-medium text-stone-700 mb-1.5">Date</label>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          required
-          className="w-full px-3.5 py-2.5 border border-stone-200 rounded-xl text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-800"
-        />
-      </div>
+      {/* Start / End card */}
+      <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden">
+        {/* All day toggle */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100">
+          <span className="text-sm font-medium text-stone-700">All day</span>
+          <button
+            type="button"
+            onClick={handleAllDayToggle}
+            className={`relative w-10 h-6 rounded-full transition-colors ${allDay ? 'bg-stone-800' : 'bg-stone-200'}`}
+          >
+            <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${allDay ? 'translate-x-5' : 'translate-x-1'}`} />
+          </button>
+        </div>
 
-      {/* All day toggle */}
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => setAllDay(!allDay)}
-          className={`relative w-10 h-6 rounded-full transition-colors ${allDay ? 'bg-stone-800' : 'bg-stone-200'}`}
-        >
-          <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${allDay ? 'translate-x-5' : 'translate-x-1'}`} />
-        </button>
-        <span className="text-sm text-stone-700">All day</span>
-      </div>
-
-      {/* Time fields */}
-      {!allDay && (
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1.5">Start time</label>
+        {/* Starts row */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-stone-100">
+          <span className="text-sm text-stone-500 w-12 flex-shrink-0">Starts</span>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => handleStartDateChange(e.target.value)}
+            required
+            className="flex-1 text-sm text-stone-900 bg-transparent focus:outline-none"
+          />
+          {!allDay && (
             <input
               type="time"
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
-              className="w-full px-3.5 py-2.5 border border-stone-200 rounded-xl text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-800"
+              className="text-sm text-stone-900 bg-transparent focus:outline-none text-right"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1.5">End time</label>
+          )}
+        </div>
+
+        {/* Ends row */}
+        <div className="flex items-center gap-3 px-4 py-3">
+          <span className="text-sm text-stone-500 w-12 flex-shrink-0">Ends</span>
+          <input
+            type="date"
+            value={endDate}
+            min={startDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="flex-1 text-sm text-stone-900 bg-transparent focus:outline-none"
+          />
+          {!allDay && (
             <input
               type="time"
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
-              className="w-full px-3.5 py-2.5 border border-stone-200 rounded-xl text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-800"
+              className="text-sm text-stone-900 bg-transparent focus:outline-none text-right"
             />
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Category */}
       <div>
@@ -160,7 +186,9 @@ export default function EventForm({ item, defaultDate }: Props) {
 
       {/* Location */}
       <div>
-        <label className="block text-sm font-medium text-stone-700 mb-1.5">Location <span className="text-stone-400 font-normal">(optional)</span></label>
+        <label className="block text-sm font-medium text-stone-700 mb-1.5">
+          Location <span className="text-stone-400 font-normal">(optional)</span>
+        </label>
         <input
           value={location}
           onChange={(e) => setLocation(e.target.value)}
@@ -171,7 +199,9 @@ export default function EventForm({ item, defaultDate }: Props) {
 
       {/* Notes */}
       <div>
-        <label className="block text-sm font-medium text-stone-700 mb-1.5">Notes <span className="text-stone-400 font-normal">(optional)</span></label>
+        <label className="block text-sm font-medium text-stone-700 mb-1.5">
+          Notes <span className="text-stone-400 font-normal">(optional)</span>
+        </label>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
@@ -193,7 +223,7 @@ export default function EventForm({ item, defaultDate }: Props) {
         </button>
         <button
           type="submit"
-          disabled={saving || !title.trim() || !date}
+          disabled={saving || !title.trim() || !startDate}
           className="flex-1 py-3 bg-stone-800 text-white rounded-xl font-medium hover:bg-stone-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {saving && <Loader2 className="w-4 h-4 animate-spin" />}

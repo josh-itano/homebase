@@ -6,6 +6,7 @@ const GCAL_BASE = 'https://www.googleapis.com/calendar/v3'
 export interface GCalEventPayload {
   title: string
   date: string        // YYYY-MM-DD
+  end_date?: string | null
   start_time: string | null  // HH:MM:SS or null
   end_time: string | null
   all_day: boolean
@@ -108,17 +109,23 @@ export async function gcalDeleteEvent(accessToken: string, calendarId: string, g
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function buildBody(p: GCalEventPayload) {
+  // Google Calendar all-day end date is exclusive, so add 1 day
+  const endDateExclusive = p.end_date
+    ? addOneDay(p.end_date)
+    : p.all_day ? addOneDay(p.date) : null
+
   if (p.all_day) {
     return {
       summary: p.title,
       location: p.location ?? undefined,
       description: p.notes ?? undefined,
       start: { date: p.date },
-      end: { date: p.date },
+      end: { date: endDateExclusive ?? addOneDay(p.date) },
     }
   }
+  const endDate = p.end_date ?? p.date
   const start = p.start_time ? `${p.date}T${p.start_time}` : `${p.date}T00:00:00`
-  const end = p.end_time ? `${p.date}T${p.end_time}` : start
+  const end = p.end_time ? `${endDate}T${p.end_time}` : start
   return {
     summary: p.title,
     location: p.location ?? undefined,
@@ -126,6 +133,12 @@ function buildBody(p: GCalEventPayload) {
     start: { dateTime: start },
     end: { dateTime: end },
   }
+}
+
+function addOneDay(date: string): string {
+  const d = new Date(date + 'T00:00:00')
+  d.setDate(d.getDate() + 1)
+  return d.toISOString().split('T')[0]
 }
 
 export interface GoogleEvent {

@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   if (!memberData) return NextResponse.json({ error: 'No household' }, { status: 400 })
 
   const body = await request.json()
-  const { title, date, start_time, end_time, all_day, category, location, notes, recurring_rule } = body
+  const { title, date, end_date, start_time, end_time, all_day, category, location, notes, recurring_rule } = body
 
   // Save to Supabase
   const { data: event, error } = await supabase.from('events').insert({
@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
     created_by: authData.user.id,
     title,
     date,
+    end_date: end_date || null,
     start_time: start_time || null,
     end_time: end_time || null,
     all_day: all_day ?? false,
